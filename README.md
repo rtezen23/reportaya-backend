@@ -21,6 +21,14 @@ Instalar las dependencias:
 pip install -r requirements.txt
 ```
 
+La aplicación usa SQLite de forma predeterminada y crea el archivo
+`reportaya.db` al iniciar. Para conectarla a MySQL, copiar `.env.example` como
+`.env` y cambiar la variable:
+
+```env
+DATABASE_URL=mysql+pymysql://usuario:contrasena@localhost:3306/reportaya
+```
+
 Iniciar el servidor:
 
 ```powershell
