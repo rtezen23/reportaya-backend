@@ -1,7 +1,7 @@
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import or_, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -50,6 +50,36 @@ def list_incidents(database: Session = Depends(get_database)):
     query = (
         select(Incident)
         .where(Incident.is_deleted.is_(False))
+        .order_by(Incident.registration_date.desc(), Incident.id.desc())
+    )
+
+    return database.scalars(query).all()
+
+
+@router.get("/buscar", response_model=list[IncidentResponse])
+def search_incidents(
+    criterio: str = Query(min_length=1, max_length=250),
+    database: Session = Depends(get_database),
+):
+    search_term = criterio.strip()
+
+    if not search_term:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Debe ingresar un criterio de búsqueda.",
+        )
+
+    search_value = f"%{search_term}%"
+    query = (
+        select(Incident)
+        .where(
+            Incident.is_deleted.is_(False),
+            or_(
+                Incident.code.ilike(search_value),
+                Incident.description.ilike(search_value),
+                Incident.incident_type.ilike(search_value),
+            ),
+        )
         .order_by(Incident.registration_date.desc(), Incident.id.desc())
     )
 
