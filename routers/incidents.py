@@ -1,6 +1,7 @@
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -40,5 +41,36 @@ def create_incident(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="No se pudo registrar la incidencia.",
         ) from error
+
+    return incident
+
+
+@router.get("", response_model=list[IncidentResponse])
+def list_incidents(database: Session = Depends(get_database)):
+    query = (
+        select(Incident)
+        .where(Incident.is_deleted.is_(False))
+        .order_by(Incident.registration_date.desc(), Incident.id.desc())
+    )
+
+    return database.scalars(query).all()
+
+
+@router.get("/{incident_id}", response_model=IncidentResponse)
+def get_incident(
+    incident_id: int,
+    database: Session = Depends(get_database),
+):
+    query = select(Incident).where(
+        Incident.id == incident_id,
+        Incident.is_deleted.is_(False),
+    )
+    incident = database.scalar(query)
+
+    if incident is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Incidencia no encontrada.",
+        )
 
     return incident
